@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'design/design_tab.dart';
 import 'document_controller.dart';
+import 'export/export_tab.dart';
 import 'platforms/platforms_tab.dart';
 
 const _jeticonType = XTypeGroup(label: 'jet-icons', extensions: ['jeticon']);
@@ -178,7 +179,7 @@ class _Shell extends StatelessWidget {
               children: [
                 DesignTab(controller: controller),
                 PlatformsTab(controller: controller),
-                const ExportTabPlaceholder(),
+                ExportTab(controller: controller),
               ],
             ),
           ),
@@ -186,11 +187,4 @@ class _Shell extends StatelessWidget {
       ),
     );
   }
-}
-
-class ExportTabPlaceholder extends StatelessWidget {
-  const ExportTabPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) => const Center(child: Text('Dışa aktar'));
 }

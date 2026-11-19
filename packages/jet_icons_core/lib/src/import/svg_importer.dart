@@ -33,17 +33,73 @@ const _supportedTags = {
   ..._gradientTags,
 };
 
-/// Attributes / style properties that are understood by no part of the model.
-const _unsupportedProps = {
-  'class',
-  'filter',
-  'mask',
-  'clip-path',
-  'stroke-dasharray',
-  'marker-start',
-  'marker-mid',
-  'marker-end',
+/// Attributes / style properties the importer understands or that cannot
+/// affect rendering. Anything else (unprefixed) makes the file unsupported.
+const _knownProps = {
+  'id',
+  'd',
+  'x',
+  'y',
+  'width',
+  'height',
+  'rx',
+  'ry',
+  'cx',
+  'cy',
+  'r',
+  'x1',
+  'y1',
+  'x2',
+  'y2',
+  'points',
+  'viewBox',
+  'transform',
+  'style',
+  'fill',
+  'fill-opacity',
+  'stroke',
+  'stroke-width',
+  'stroke-opacity',
+  'opacity',
+  'display',
+  'fill-rule',
+  'clip-rule',
+  'offset',
+  'stop-color',
+  'stop-opacity',
+  'gradientUnits',
+  'gradientTransform',
+  'spreadMethod',
+  'fx',
+  'fy',
+  'fr',
+  'version',
+  'baseProfile',
+  'preserveAspectRatio',
+  'role',
+  'focusable',
+  'tabindex',
 };
+
+/// Properties that are accepted only with their SVG default value.
+const _defaultOnly = <String, Set<String>>{
+  'stroke-linecap': {'butt'},
+  'stroke-linejoin': {'miter'},
+  'stroke-miterlimit': {'4'},
+  'visibility': {'visible'},
+  'vector-effect': {'none'},
+  'paint-order': {'normal'},
+  'mix-blend-mode': {'normal'},
+  'stroke-dasharray': {'none'},
+  'color': {'black', '#000', '#000000'},
+};
+
+bool _isKnown(String name, String value) {
+  if (_knownProps.contains(name)) return true;
+  final defaults = _defaultOnly[name];
+  if (defaults != null) return defaults.contains(value.trim().toLowerCase());
+  return name.startsWith('data-') || name.startsWith('aria-');
+}
 
 /// Imports [svg]. A fully supported file becomes an editable [GroupElement];
 /// anything else is kept whole as a [RawSvgElement] with an
@@ -61,7 +117,7 @@ ImportResult importSvg(String svg, {required String id, String name = 'SVG'}) {
     throw FormatException('Root element is <${root.name.local}>, not <svg>');
   }
   final vb = _viewBox(root);
-  final importer = _Importer(root, id, vb);
+  final importer = _Importer(root, id, vb)..checkRoot(root);
   final children = <IconElement>[];
   importer.visitChildren(root, const _Style(), children, render: true);
   final tags = importer.unsupported.toList();
@@ -185,14 +241,20 @@ class _Importer {
 
   void _checkProps(XmlElement e) {
     for (final a in e.attributes) {
-      if (_unsupportedProps.contains(a.name.qualified)) {
-        unsupported.add(a.name.qualified);
-      }
+      // Namespaced attributes (xmlns, xlink, editor metadata) are not
+      // presentation attributes; gradient `href` is checked separately.
+      if (a.name.prefix != null || a.name.local == 'xmlns') continue;
+      if (!_isKnown(a.name.local, a.value)) unsupported.add(a.name.local);
     }
-    for (final key in _styleOf(e).keys) {
-      if (_unsupportedProps.contains(key)) unsupported.add(key);
+    for (final entry in _styleOf(e).entries) {
+      if (!_isKnown(entry.key, entry.value)) unsupported.add(entry.key);
     }
     if (prop(e, 'fill-rule')?.trim() == 'evenodd') unsupported.add('fill-rule');
+  }
+
+  /// A `transform` on the root `<svg>` is not modelled.
+  void checkRoot(XmlElement root) {
+    if (root.getAttribute('transform') != null) unsupported.add('transform');
   }
 
   void visitChildren(
@@ -240,7 +302,10 @@ class _Importer {
       return;
     }
     switch (tag) {
-      case 'title' || 'desc' || 'metadata' || 'stop':
+      case 'title' || 'desc' || 'metadata':
+        return;
+      case 'stop':
+        _checkProps(e);
         return;
       case 'svg':
         unsupported.add('svg'); // nested svg establishes a new viewport
@@ -256,6 +321,7 @@ class _Importer {
           return;
         }
         _checkProps(e);
+        final transform = _transformOf(e); // before children: document order
         final id = _nextId();
         final children = <IconElement>[];
         visitChildren(e, inherited, children, render: true);
@@ -263,7 +329,7 @@ class _Importer {
           GroupElement(
             id: id,
             name: e.getAttribute('id') ?? tag,
-            transform: _transformOf(e),
+            transform: transform,
             opacity: opacityOf(e),
             hidden: _hidden(e),
             children: children,
@@ -285,6 +351,16 @@ class _Importer {
     for (final a in g.attributes) {
       if (a.name.local == 'href') unsupported.add(a.name.qualified);
     }
+    if (g.name.local == 'radialGradient') {
+      final cx = g.getAttribute('cx')?.trim() ?? '50%';
+      final cy = g.getAttribute('cy')?.trim() ?? '50%';
+      final fx = g.getAttribute('fx')?.trim();
+      final fy = g.getAttribute('fy')?.trim();
+      final fr = g.getAttribute('fr')?.trim();
+      if (fx != null && fx != cx) unsupported.add('fx');
+      if (fy != null && fy != cy) unsupported.add('fy');
+      if (fr != null && (parseLength(fr) ?? 1) != 0) unsupported.add('fr');
+    }
     final spread = g.getAttribute('spreadMethod');
     if (spread != null && spread.trim() != 'pad') {
       unsupported.add('spreadMethod');
@@ -300,7 +376,7 @@ class _Importer {
   }
 
   void _shape(XmlElement e, String tag, _Style s, List<IconElement> out) {
-    final shape = shapeToPath(e, tag);
+    final shape = shapeToPath(e, tag, unsupported.add);
     if (shape == null) return;
     final id = _nextId();
     final bounds = shape.bounds == null
@@ -407,12 +483,13 @@ class _Importer {
         math.sqrt((vb.width * vb.width + vb.height * vb.height) / 2),
       );
     } else {
-      // Non-square boxes give an elliptical gradient; approximate with the
-      // mean edge length (exact for circles).
-      r =
-          gradientCoord(g.getAttribute('r'), 0.5, 1) *
-          (bounds!.w + bounds.h) /
-          2;
+      // A non-square box would give an elliptical gradient, which the
+      // circular model cannot express.
+      if ((bounds!.w - bounds.h).abs() > 1e-9) {
+        unsupported.add('gradientUnits=objectBoundingBox');
+        return null;
+      }
+      r = gradientCoord(g.getAttribute('r'), 0.5, 1) * bounds.w;
     }
     return RadialGradientFill(
       stops,

@@ -79,8 +79,39 @@ class ShapePath {
 
 /// Converts a basic shape (or `path`) to path data. Returns `null` when the
 /// element renders nothing (missing/zero size, no data).
-ShapePath? shapeToPath(XmlElement e, String tag) {
-  double n(String name) => parseLength(e.getAttribute(name)) ?? 0;
+///
+/// An attribute that is present but not a plain number (e.g. `100%`) is
+/// reported through [unsupported] and the shape is dropped, so the caller can
+/// fall back to a raw SVG instead of silently losing it.
+ShapePath? shapeToPath(
+  XmlElement e,
+  String tag,
+  void Function(String) unsupported,
+) {
+  var bad = false;
+  double? num(String name) {
+    final raw = e.getAttribute(name);
+    if (raw == null) return null;
+    final v = parseLength(raw);
+    if (v == null) {
+      unsupported(raw.trim());
+      bad = true;
+    }
+    return v;
+  }
+
+  double n(String name) => num(name) ?? 0;
+  final result = _shape(e, tag, n, num, unsupported);
+  return bad ? null : result;
+}
+
+ShapePath? _shape(
+  XmlElement e,
+  String tag,
+  double Function(String) n,
+  double? Function(String) num,
+  void Function(String) unsupported,
+) {
   switch (tag) {
     case 'path':
       final d = e.getAttribute('d')?.trim();
@@ -88,8 +119,8 @@ ShapePath? shapeToPath(XmlElement e, String tag) {
     case 'rect':
       final x = n('x'), y = n('y'), w = n('width'), h = n('height');
       if (w <= 0 || h <= 0) return null;
-      var rx = parseLength(e.getAttribute('rx'));
-      var ry = parseLength(e.getAttribute('ry'));
+      var rx = num('rx');
+      var ry = num('ry');
       rx ??= ry;
       ry ??= rx;
       rx = math.min(math.max(rx ?? 0, 0), w / 2);
@@ -124,8 +155,14 @@ ShapePath? shapeToPath(XmlElement e, String tag) {
         null,
       );
     case 'polyline' || 'polygon':
-      final pts = parseNumberList(e.getAttribute('points') ?? '');
-      if (pts == null || pts.length < 4) return null;
+      final raw = e.getAttribute('points');
+      if (raw == null) return null;
+      final pts = parseNumberList(raw);
+      if (pts == null || pts.length.isOdd) {
+        unsupported(raw.trim());
+        return null;
+      }
+      if (pts.length < 4) return null;
       final b = StringBuffer();
       for (var i = 0; i + 1 < pts.length; i += 2) {
         b.write('${i == 0 ? 'M' : 'L'}${fmt(pts[i])} ${fmt(pts[i + 1])}');

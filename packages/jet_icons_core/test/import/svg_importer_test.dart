@@ -398,6 +398,83 @@ void main() {
     });
   });
 
+  group('never renders differently from the source', () {
+    ImportResult imp(String body) =>
+        importSvg('<svg viewBox="0 0 24 24">$body</svg>', id: 'i');
+
+    test('radial objectBoundingBox on a non-square rect is raw', () {
+      final r = imp(
+        '<radialGradient id="g"><stop offset="0" stop-color="#fff"/>'
+        '<stop offset="1" stop-color="#000"/></radialGradient>'
+        '<rect width="20" height="10" fill="url(#g)"/>',
+      );
+      expect(r.element, isA<RawSvgElement>());
+      expect(_tags(r), ['gradientUnits=objectBoundingBox']);
+    });
+
+    test('radial fx/fy/fr off-center are unsupported, centered ones fine', () {
+      final bad = imp(
+        '<radialGradient id="g" fx="0.2" fy="0.3" fr="0.1"/><path d="M0 0"/>',
+      );
+      expect(_tags(bad), ['fx', 'fy', 'fr']);
+      final ok = imp(
+        '<radialGradient id="g" cx="0.5" fx="0.5" fr="0"/><path d="M0 0"/>',
+      );
+      expect(ok.warnings, isEmpty);
+    });
+
+    test('stroke-linecap, visibility and other props are unsupported', () {
+      expect(_tags(imp('<path d="M0 0" stroke-linecap="round"/>')), [
+        'stroke-linecap',
+      ]);
+      expect(_tags(imp('<path d="M0 0" visibility="hidden"/>')), [
+        'visibility',
+      ]);
+      expect(_tags(imp('<path d="M0 0" style="stroke-linejoin:round"/>')), [
+        'stroke-linejoin',
+      ]);
+      expect(_tags(imp('<path d="M0 0" color="#f00"/>')), ['color']);
+      expect(_tags(imp('<path d="M0 0" mix-blend-mode="multiply"/>')), [
+        'mix-blend-mode',
+      ]);
+      expect(
+        _tags(imp('<path d="M0 0" vector-effect="non-scaling-stroke"/>')),
+        ['vector-effect'],
+      );
+    });
+
+    test('default-valued props are accepted', () {
+      final r = imp(
+        '<path d="M0 0" stroke-linecap="butt" stroke-linejoin="miter" '
+        'visibility="visible" data-x="1"/>',
+      );
+      expect(r.warnings, isEmpty);
+    });
+
+    test('transform on the root svg is unsupported', () {
+      final r = importSvg(
+        '<svg viewBox="0 0 24 24" transform="scale(2)"><path d="M0 0"/></svg>',
+        id: 'i',
+      );
+      expect(_tags(r), ['transform']);
+    });
+
+    test('percent or malformed shape attributes are not dropped silently', () {
+      expect(_tags(imp('<rect width="100%" height="100%"/>')), ['100%']);
+      expect(_tags(imp('<circle cx="50%" cy="1" r="3"/>')), ['50%']);
+      expect(_tags(imp('<ellipse rx="abc" ry="1"/>')), ['abc']);
+      expect(_tags(imp('<polygon points="0,0 5,x 3,3"/>')), ['0,0 5,x 3,3']);
+      expect(_tags(imp('<polyline points="0 0 5"/>')), ['0 0 5']);
+    });
+
+    test('g transform is evaluated before children (document order)', () {
+      final r = imp(
+        '<g transform="skewX(5)"><path d="M0 0" clip-path="url(#c)"/></g>',
+      );
+      expect(_tags(r), ['skewX', 'clip-path']);
+    });
+  });
+
   group('errors', () {
     test('malformed xml throws FormatException', () {
       expect(

@@ -301,6 +301,69 @@ void main() {
       );
     });
 
+    test('element patches are baked into the copy on detach', () {
+      var d = setElementPatch(
+        _doc(),
+        _ios,
+        null,
+        null,
+        'e1',
+        hidden: true,
+        opacity: 0.5,
+      );
+      d = setLayerPatch(d, _ios, null, null, LayerKind.foreground, scale: 0.7);
+      final before = resolveIcon(d, platform: _ios, sizePx: 1024).foreground;
+      d = detachLayer(d, _ios, null, null, LayerKind.foreground);
+      final o = d.overrides.single;
+      expect(o.elementPatches, isEmpty);
+      expect(o.layerPatches, hasLength(1));
+      final copy = o.detached[LayerKind.foreground]!;
+      final e = copy.elements.first;
+      expect(e.hidden, isTrue);
+      expect(e.opacity, 0.5);
+      final after = resolveIcon(d, platform: _ios, sizePx: 1024).foreground;
+      expect(after.scale, before.scale);
+      expect(after.elements.length, before.elements.length);
+      expect(after.elements.first.hidden, before.elements.first.hidden);
+      expect(after.elements.first.opacity, before.elements.first.opacity);
+    });
+
+    test('detach keeps element patches for other layers', () {
+      var d = IconDocument.empty().copyWith(
+        background: Layer(null, [_p('e1')]),
+        foreground: Layer(null, [_p('e2')]),
+      );
+      d = setElementPatch(d, _ios, null, null, 'e1', hidden: true);
+      d = setElementPatch(d, _ios, null, null, 'e2', hidden: true);
+      d = detachLayer(d, _ios, null, null, LayerKind.foreground);
+      expect(d.overrides.single.elementPatches.single.elementId, 'e1');
+    });
+
+    test('reattach drops element patches of the detached copy', () {
+      var d = detachLayer(_doc(), _ios, null, null, LayerKind.foreground);
+      final ids = d.overrides.single.detached[LayerKind.foreground]!.elements;
+      final group = ids.last as GroupElement;
+      d = setElementPatch(d, _ios, null, null, ids.first.id, hidden: true);
+      d = setElementPatch(
+        d,
+        _ios,
+        null,
+        null,
+        group.children.single.id,
+        opacity: 0.2,
+      );
+      d = reattachLayer(d, _ios, null, null, LayerKind.foreground);
+      expect(d.overrides, isEmpty);
+    });
+
+    test('reattach keeps patches that target other layers', () {
+      var d = setElementPatch(_doc(), _ios, null, null, 'e1', hidden: true);
+      d = detachLayer(d, _ios, null, null, LayerKind.background);
+      d = setElementPatch(d, _ios, null, null, 'e1', opacity: 0.3);
+      d = reattachLayer(d, _ios, null, null, LayerKind.background);
+      expect(d.overrides.single.elementPatches.single.elementId, 'e1');
+    });
+
     test('reattach removes the entry and the empty override', () {
       var d = detachLayer(_doc(), _ios, null, null, LayerKind.background);
       d = reattachLayer(d, _ios, null, null, LayerKind.background);

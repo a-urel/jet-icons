@@ -381,5 +381,30 @@ void main() {
       await _tap(t, 'reset-el-e1-opacity');
       expect(c.doc.overrides, isEmpty);
     });
+
+    testWidgets('toggling back to the common value clears the patch', (
+      t,
+    ) async {
+      final c = _controller();
+      await _pump(t, c);
+      await _select(t, IconPlatform.macos);
+      await _tap(t, 'el-hide-e1');
+      expect(c.doc.overrides, hasLength(1));
+      await _tap(t, 'el-hide-e1');
+      expect(c.doc.overrides, isEmpty);
+    });
+
+    testWidgets('opacity back to common value clears the patch', (t) async {
+      final c = _controller();
+      await _pump(t, c);
+      await _select(t, IconPlatform.macos);
+      final f = find.byKey(const Key('el-opacity-e1'));
+      await t.drag(f, const Offset(-40, 0));
+      await t.pump();
+      expect(c.doc.overrides, hasLength(1));
+      await t.drag(f, const Offset(400, 0));
+      await t.pump();
+      expect(c.doc.overrides, isEmpty);
+    });
   });
 }

@@ -218,16 +218,30 @@ IconDocument detachLayer(
         if (!_matches(o, p, v, r)) o,
     ],
   );
+  final own = findOverride(doc, p, v, r);
+  final ownPatches = own?.elementPatches ?? const <ElementPatch>[];
+  // Bake this override's element patches into the copy: resolve with an
+  // override that carries only those patches.
+  final probe = without.copyWith(
+    overrides: [
+      ...without.overrides,
+      PlatformOverride(p, variant: v, sizeRange: r, elementPatches: ownPatches),
+    ],
+  );
   final resolved = resolveIcon(
-    without,
+    probe,
     platform: p,
     variant: v ?? IconVariant.light,
     sizePx: r?.minPx ?? _fullSize,
   );
-  final base = switch (kind) {
-    LayerKind.background => resolved.background,
-    LayerKind.foreground => resolved.foreground,
-    LayerKind.monochrome => resolved.monochrome,
+  final base = _layerOf(resolved, kind);
+  final baseIds = {for (final e in elementIdsOf(base)) e.$1};
+  // Patches that also target another layer stay (e.g. a derived monochrome
+  // shares ids with the foreground, so it does not count unless explicit).
+  final otherIds = <String>{
+    for (final k in LayerKind.values)
+      if (k != kind && (k != LayerKind.monochrome || doc.monochrome != null))
+        for (final e in elementIdsOf(_layerOf(resolved, k))) e.$1,
   };
   final copy = withFreshIds(base, allElementIds(doc));
   return updateOverride(
@@ -235,29 +249,48 @@ IconDocument detachLayer(
     p,
     v,
     r,
-    (o) => o.copyWith(detached: {...o.detached, kind: copy}),
+    (o) => o.copyWith(
+      detached: {...o.detached, kind: copy},
+      elementPatches: [
+        for (final ep in o.elementPatches)
+          if (!baseIds.contains(ep.elementId) ||
+              otherIds.contains(ep.elementId))
+            ep,
+      ],
+    ),
   );
 }
 
-/// Removes `detached[kind]`; the override disappears when nothing is left.
+Layer _layerOf(ResolvedIcon r, LayerKind kind) => switch (kind) {
+  LayerKind.background => r.background,
+  LayerKind.foreground => r.foreground,
+  LayerKind.monochrome => r.monochrome,
+};
+
+/// Removes `detached[kind]` and the element patches that target its
+/// elements; the override disappears when nothing is left.
 IconDocument reattachLayer(
   IconDocument doc,
   IconPlatform p,
   IconVariant? v,
   SizeRange? r,
   LayerKind kind,
-) => updateOverride(
-  doc,
-  p,
-  v,
-  r,
-  (o) => o.copyWith(
+) => updateOverride(doc, p, v, r, (o) {
+  final removed = o.detached[kind];
+  final ids = removed == null
+      ? const <String>{}
+      : {for (final e in elementIdsOf(removed)) e.$1};
+  return o.copyWith(
     detached: {
       for (final e in o.detached.entries)
         if (e.key != kind) e.key: e.value,
     },
-  ),
-);
+    elementPatches: [
+      for (final ep in o.elementPatches)
+        if (!ids.contains(ep.elementId)) ep,
+    ],
+  );
+});
 
 /// Every element of [layer] depth first as `(id, depth, element)`.
 List<(String, int, IconElement)> elementIdsOf(Layer layer) {

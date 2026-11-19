@@ -270,14 +270,23 @@ class OverridePanel extends StatelessWidget {
                 key: Key('el-hide-$id'),
                 value: (patch?.hidden ?? e.hidden) == true,
                 onChanged: (v) => c.apply(
-                  setElementPatch(
-                    c.doc,
-                    platform,
-                    variant,
-                    range,
-                    id,
-                    hidden: v,
-                  ),
+                  v == e.hidden
+                      ? clearElementPatchField(
+                          c.doc,
+                          platform,
+                          variant,
+                          range,
+                          id,
+                          ElementPatchField.hidden,
+                        )
+                      : setElementPatch(
+                          c.doc,
+                          platform,
+                          variant,
+                          range,
+                          id,
+                          hidden: v,
+                        ),
                 ),
               ),
             ],
@@ -293,14 +302,23 @@ class OverridePanel extends StatelessWidget {
                   label: '${(opacity * 100).round()}%',
                   onChangeStart: (_) => c.beginGesture(),
                   onChanged: (v) => c.preview(
-                    setElementPatch(
-                      c.doc,
-                      platform,
-                      variant,
-                      range,
-                      id,
-                      opacity: v,
-                    ),
+                    v == e.opacity
+                        ? clearElementPatchField(
+                            c.doc,
+                            platform,
+                            variant,
+                            range,
+                            id,
+                            ElementPatchField.opacity,
+                          )
+                        : setElementPatch(
+                            c.doc,
+                            platform,
+                            variant,
+                            range,
+                            id,
+                            opacity: v,
+                          ),
                   ),
                   onChangeEnd: (_) => c.endGesture(),
                 ),

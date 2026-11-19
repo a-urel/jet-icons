@@ -1,0 +1,8 @@
+name: jet_icons_workspace
+publish_to: none
+environment:
+  sdk: ^3.14.0
+workspace:
+  - packages/jet_icons_core
+dev_dependencies:
+  lints: ^6.1.0

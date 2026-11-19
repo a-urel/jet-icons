@@ -1,0 +1,16 @@
+name: jet_icons_core
+description: Pure-Dart icon model, .jeticon codec and export core for jet-icons.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.14.0
+dependencies:
+  archive: ^4.7.1
+  collection: ^1.19.1
+  image: ^4.13.1
+  meta: ^1.19.0
+  xml: ^7.1.0
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.33.0

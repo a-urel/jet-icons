@@ -17,3 +17,13 @@ export 'src/model/override.dart';
 export 'src/model/transform.dart';
 export 'src/resolve/resolver.dart'
     show ResolvedIcon, findElement, resolveIcon, shapeFor;
+export 'src/platforms/output.dart'
+    show
+        Composition,
+        ContainerKind,
+        ContainerOutput,
+        ImageOutput,
+        OutputFile,
+        RenderRequest,
+        TextOutput;
+export 'src/platforms/outputs.dart' show outputsFor;

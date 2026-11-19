@@ -31,3 +31,8 @@ export 'src/platforms/output.dart'
         RenderRequest,
         TextOutput;
 export 'src/platforms/outputs.dart' show outputsFor;
+export 'src/export/export_runner.dart'
+    show ExportBundle, encodeZip, plannedPaths, runExport;
+export 'src/export/rasterizer.dart' show IconRasterizer;
+export 'src/export/writers.dart'
+    show ExportTargetExistsException, writeToFolder;

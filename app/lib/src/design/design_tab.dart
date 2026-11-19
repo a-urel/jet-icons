@@ -84,21 +84,30 @@ class _DesignTabState extends State<DesignTab> {
       old.dispose();
       return;
     }
+    final messenger = ScaffoldMessenger.maybeOf(context);
     PreparedAssets.load(
-      ResolvedIcon(
-        Layer(null, elements),
-        const Layer(null, []),
-        const Layer(null, []),
-      ),
-    ).then((loaded) {
-      if (!mounted || generation != _generation) {
-        loaded.dispose();
-        return;
-      }
-      final old = _assets;
-      setState(() => _assets = loaded);
-      old.dispose();
-    });
+          ResolvedIcon(
+            Layer(null, elements),
+            const Layer(null, []),
+            const Layer(null, []),
+          ),
+        )
+        .then((loaded) {
+          if (!mounted || generation != _generation) {
+            loaded.dispose();
+            return;
+          }
+          final old = _assets;
+          setState(() => _assets = loaded);
+          old.dispose();
+        })
+        .catchError((Object _) {
+          if (!mounted || generation != _generation) return;
+          // Keep painting without assets; the next asset-set change retries.
+          messenger?.showSnackBar(
+            const SnackBar(content: Text('Görsel yüklenemedi')),
+          );
+        });
   }
 
   Future<void> _import() async {

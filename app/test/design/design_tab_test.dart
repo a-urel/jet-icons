@@ -208,7 +208,35 @@ void main() {
       await _pump(t, c);
       await t.enterText(find.byKey(const Key('fill-hex-0')), 'FF0000');
       await t.pump();
+      expect(c.doc.background.fill, const SolidFill(JColor(0xFFFFFFFF)));
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pump();
       expect(c.doc.background.fill, const SolidFill(JColor(0xFFFF0000)));
+    });
+
+    testWidgets('8-digit hex commits once, without a 6-digit prefix', (
+      t,
+    ) async {
+      final c = _controller();
+      c.select(LayerKind.background);
+      await _pump(t, c);
+      await t.enterText(find.byKey(const Key('fill-hex-0')), '80FF0000');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pump();
+      expect(c.doc.background.fill, const SolidFill(JColor(0x80FF0000)));
+      c.undo();
+      expect(c.canUndo, isFalse);
+    });
+
+    testWidgets('hex commits on focus loss', (t) async {
+      final c = _controller();
+      c.select(LayerKind.background);
+      await _pump(t, c);
+      await t.tap(find.byKey(const Key('fill-hex-0')));
+      await t.enterText(find.byKey(const Key('fill-hex-0')), '00FF00');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await t.pump();
+      expect(c.doc.background.fill, const SolidFill(JColor(0xFF00FF00)));
     });
 
     testWidgets('invalid hex leaves doc unchanged and shows error', (t) async {
@@ -217,6 +245,7 @@ void main() {
       await _pump(t, c);
       final before = c.doc;
       await t.enterText(find.byKey(const Key('fill-hex-0')), 'XYZ');
+      await t.testTextInput.receiveAction(TextInputAction.done);
       await t.pump();
       expect(c.doc, before);
       expect(find.text('Geçersiz renk'), findsOneWidget);

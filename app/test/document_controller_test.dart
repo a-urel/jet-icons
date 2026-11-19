@@ -250,6 +250,16 @@ void gestureTests() {
       expect(c.dirty, isFalse);
     });
 
+    test('preview outside a gesture is a normal undoable edit', () {
+      final c = DocumentController();
+      final start = c.doc;
+      c.preview(withBg(0xFF444444));
+      expect(c.canUndo, isTrue);
+      expect(c.dirty, isTrue);
+      c.undo();
+      expect(c.doc, start);
+    });
+
     test('gesture clears redo', () {
       final c = DocumentController();
       c.apply(withBg(0xFF111111));

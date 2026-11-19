@@ -40,8 +40,11 @@ class DocumentController extends ChangeNotifier {
   /// recorded; [endGesture] records the whole gesture as one undo step.
   void beginGesture() => _gestureStart = _doc;
 
-  /// Replaces the document without touching history or [dirty].
+  /// Replaces the document without touching history or [dirty] while a
+  /// gesture is active. Outside a gesture (e.g. keyboard slider steps) it
+  /// behaves like [apply] so the change stays undoable.
   void preview(IconDocument next) {
+    if (_gestureStart == null) return apply(next);
     _doc = next;
     notifyListeners();
   }

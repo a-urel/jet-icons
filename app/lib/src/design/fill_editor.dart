@@ -26,8 +26,8 @@ JColor? parseHexInput(String input) {
   return JColor(s.length == 6 ? 0xFF000000 | v : v);
 }
 
-/// A hex text field. Calls [onColor] for every valid entry and shows
-/// "Geçersiz renk" for an invalid one (nothing is reported then).
+/// A hex text field. Commits on submit and on focus loss: calls [onColor]
+/// for a valid entry, shows "Geçersiz renk" for an invalid one.
 class HexField extends StatefulWidget {
   const HexField({
     super.key,
@@ -50,6 +50,10 @@ class _HexFieldState extends State<HexField> {
   );
   bool _invalid = false;
 
+  /// Last color reported or received; submit and the following focus loss
+  /// must not both commit before the parent has rebuilt.
+  late JColor _committed = widget.color;
+
   static String _format(JColor c) => c.toHex().substring(1);
 
   @override
@@ -68,25 +72,36 @@ class _HexFieldState extends State<HexField> {
     super.dispose();
   }
 
-  void _apply(String value) {
+  /// Validates and commits [value]; called on submit and focus loss.
+  void _commit(String value) {
     final c = parseHexInput(value);
     setState(() => _invalid = c == null);
-    if (c != null && c != widget.color) widget.onColor(c);
+    if (c != null && c != _committed) {
+      _committed = c;
+      widget.onColor(c);
+    }
   }
 
   @override
-  Widget build(BuildContext context) => TextField(
-    controller: _text,
-    onChanged: _apply,
-    onSubmitted: _apply,
-    inputFormatters: [
-      FilteringTextInputFormatter.allow(RegExp('[0-9a-fA-F#]')),
-    ],
-    decoration: InputDecoration(
-      isDense: true,
-      labelText: widget.label,
-      prefixText: '#',
-      errorText: _invalid ? 'Geçersiz renk' : null,
+  Widget build(BuildContext context) => Focus(
+    onFocusChange: (focused) {
+      if (!focused) _commit(_text.text);
+    },
+    child: TextField(
+      controller: _text,
+      onChanged: (_) {
+        if (_invalid) setState(() => _invalid = false);
+      },
+      onSubmitted: _commit,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp('[0-9a-fA-F#]')),
+      ],
+      decoration: InputDecoration(
+        isDense: true,
+        labelText: widget.label,
+        prefixText: '#',
+        errorText: _invalid ? 'Geçersiz renk' : null,
+      ),
     ),
   );
 }

@@ -21,20 +21,8 @@ class LayersPanel extends StatelessWidget {
   );
 
   void _delete(LayerKind kind, IconElement e) {
-    final layer = layerOf(controller.doc, kind);
     final wasSelected = controller.selectedElementId == e.id;
-    controller.apply(
-      withLayer(
-        controller.doc,
-        kind,
-        layer.copyWith(
-          elements: [
-            for (final x in layer.elements)
-              if (x.id != e.id) x,
-          ],
-        ),
-      ),
-    );
+    controller.apply(removeElement(controller.doc, kind, e.id));
     if (wasSelected) controller.select(kind);
   }
 

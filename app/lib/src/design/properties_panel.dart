@@ -116,19 +116,7 @@ class PropertiesPanel extends StatelessWidget {
       OutlinedButton.icon(
         key: const Key('delete-selected'),
         onPressed: () {
-          final layer = layerOf(c.doc, kind);
-          c.apply(
-            withLayer(
-              c.doc,
-              kind,
-              layer.copyWith(
-                elements: [
-                  for (final x in layer.elements)
-                    if (x.id != e.id) x,
-                ],
-              ),
-            ),
-          );
+          c.apply(removeElement(c.doc, kind, e.id));
           c.select(kind);
         },
         icon: const Icon(Icons.delete_outline),

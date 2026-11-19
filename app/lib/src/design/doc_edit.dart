@@ -126,3 +126,18 @@ List<IconElement> assetElements(IconDocument doc) {
   }
   return out;
 }
+
+/// Removes the top-level element [id] from layer [kind].
+IconDocument removeElement(IconDocument d, LayerKind kind, String id) {
+  final layer = layerOf(d, kind);
+  return withLayer(
+    d,
+    kind,
+    layer.copyWith(
+      elements: [
+        for (final x in layer.elements)
+          if (x.id != id) x,
+      ],
+    ),
+  );
+}

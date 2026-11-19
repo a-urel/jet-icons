@@ -2,6 +2,12 @@
 library;
 
 export 'src/codec/jeticon_codec.dart';
+export 'src/encoders/adaptive_icon_xml.dart';
+export 'src/encoders/contents_json.dart';
+export 'src/encoders/icns.dart';
+export 'src/encoders/ico.dart';
+export 'src/encoders/png_alpha.dart';
+export 'src/encoders/web_manifest.dart';
 export 'src/model/color.dart';
 export 'src/model/document.dart';
 export 'src/model/element.dart';

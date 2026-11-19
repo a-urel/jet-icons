@@ -59,6 +59,7 @@ class _HexFieldState extends State<HexField> {
   @override
   void didUpdateWidget(HexField old) {
     super.didUpdateWidget(old);
+    if (old.color != widget.color) _committed = widget.color;
     if (old.color != widget.color &&
         parseHexInput(_text.text) != widget.color) {
       _text.text = _format(widget.color);

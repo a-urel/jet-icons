@@ -228,6 +228,47 @@ void main() {
       expect(c.canUndo, isFalse);
     });
 
+    testWidgets('retyping a color after undo is not swallowed', (t) async {
+      final c = _controller();
+      c.select(LayerKind.background);
+      await _pump(t, c);
+      final f = find.byKey(const Key('fill-hex-0'));
+      await t.enterText(f, 'FF0000');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pump();
+      c.undo();
+      await t.pump();
+      expect(c.doc.background.fill, const SolidFill(JColor(0xFFFFFFFF)));
+      await t.enterText(f, 'FF0000');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pump();
+      expect(c.doc.background.fill, const SolidFill(JColor(0xFFFF0000)));
+    });
+
+    testWidgets('focus and blur after an external change adds no undo', (
+      t,
+    ) async {
+      final c = _controller();
+      c.select(LayerKind.background);
+      await _pump(t, c);
+      final f = find.byKey(const Key('fill-hex-0'));
+      await t.enterText(f, 'FF0000');
+      await t.testTextInput.receiveAction(TextInputAction.done);
+      await t.pump();
+      await t.tap(find.byKey(const Key('swatch-FF1E88E5')));
+      await t.pump();
+      c.undo();
+      c.redo();
+      await t.pump();
+      // Undo stack: [initial, red] with blue current; blur must add nothing.
+      await t.tap(f);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await t.pump();
+      c.undo();
+      c.undo();
+      expect(c.canUndo, isFalse);
+    });
+
     testWidgets('hex commits on focus loss', (t) async {
       final c = _controller();
       c.select(LayerKind.background);

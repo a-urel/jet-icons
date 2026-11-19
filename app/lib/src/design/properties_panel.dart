@@ -126,8 +126,11 @@ class PropertiesPanel extends StatelessWidget {
   }
 }
 
-/// Percentage field: relative to the current size, applied on submit, then
-/// reset to 100.
+const _minScalePct = 1.0;
+const _maxScalePct = 10000.0;
+
+/// Percentage field: relative to the current size (clamped to 1%-10000%), applied on submit,
+/// then reset to 100.
 class _ScaleField extends StatefulWidget {
   const _ScaleField({super.key, required this.onScale});
 
@@ -148,7 +151,9 @@ class _ScaleFieldState extends State<_ScaleField> {
 
   void _submit(String value) {
     final pct = double.tryParse(value.replaceAll(',', '.'));
-    if (pct != null && pct > 0 && pct != 100) widget.onScale(pct / 100);
+    if (pct != null && pct.isFinite && pct > 0 && pct != 100) {
+      widget.onScale(pct.clamp(_minScalePct, _maxScalePct) / 100);
+    }
     _text.text = '100';
   }
 

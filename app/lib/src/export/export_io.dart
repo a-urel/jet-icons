@@ -11,6 +11,7 @@ class ExportIo {
     this.pickDirectory = _pickDirectory,
     this.writeFolder = _writeFolder,
     this.writeFile = _writeFile,
+    this.exists = _exists,
     this.revealFolder = _revealFolder,
   });
 
@@ -30,6 +31,9 @@ class ExportIo {
   final Future<void> Function(String path, Uint8List bytes) writeFile;
 
   final Future<void> Function(String path) revealFolder;
+
+  /// Whether a file already exists at the path.
+  final Future<bool> Function(String path) exists;
 }
 
 Future<String?> _pickZipPath() async => (await getSaveLocation(
@@ -49,6 +53,8 @@ Future<Directory> _writeFolder(
 
 Future<void> _writeFile(String path, Uint8List bytes) =>
     File(path).writeAsBytes(bytes);
+
+Future<bool> _exists(String path) => File(path).exists();
 
 Future<void> _revealFolder(String path) async {
   final command = Platform.isMacOS

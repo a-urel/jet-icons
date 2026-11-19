@@ -329,6 +329,26 @@ void main() {
       expect(b.center.dx, closeTo(200, 1e-6));
     });
 
+    testWidgets('scale field rejects non-finite and clamps the range', (
+      t,
+    ) async {
+      Future<void> submit(DocumentController c, String text) async {
+        await t.enterText(find.byKey(const Key('scale-field')), text);
+        await t.testTextInput.receiveAction(TextInputAction.done);
+        await t.pump();
+      }
+
+      final c = _controller();
+      await _pump(t, c);
+      await submit(c, '9' * 400);
+      expect(elementBounds(_el(c)).width, closeTo(200, 1e-6));
+      await submit(c, '99999999');
+      expect(elementBounds(_el(c)).width, closeTo(200 * 100, 1e-6));
+      c.undo();
+      await submit(c, '0.0001');
+      expect(elementBounds(_el(c)).width, closeTo(2, 1e-6));
+    });
+
     testWidgets('opacity slider is one undo step', (t) async {
       final c = _controller();
       await _pump(t, c);

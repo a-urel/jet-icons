@@ -39,6 +39,7 @@ class _Calls {
 ExportIo _io(
   _Calls calls, {
   String? zipPath = '/tmp/out',
+  Set<String> existing = const {},
   String? dir = '/tmp/parent',
   Future<Directory> Function(ExportBundle, Directory, {bool overwrite})?
   writeFolder,
@@ -52,6 +53,7 @@ ExportIo _io(
         return Directory('${d.path}/jet-icons-export');
       },
   writeFile: (p, b) async => calls.writes.add((p, b)),
+  exists: (p) async => existing.contains(p),
   revealFolder: (p) async => calls.reveals.add(p),
 );
 
@@ -119,6 +121,46 @@ void main() {
     expect(calls.writes.single.$1, '/tmp/out.zip');
     expect(calls.writes.single.$2.sublist(0, 2), [0x50, 0x4B]);
     expect(find.text('Dışa aktarıldı: /tmp/out.zip'), findsOneWidget);
+  });
+
+  testWidgets('adjusted zip path that exists asks before overwriting', (
+    t,
+  ) async {
+    final calls = _Calls();
+    await _pump(t, _controller(), _io(calls, existing: {'/tmp/out.zip'}));
+    await _only(t, IconPlatform.windows);
+    await t.tap(find.byKey(const Key('export-button')));
+    await _settle(t);
+    expect(
+      find.text('/tmp/out.zip zaten var. Üzerine yazılsın mı?'),
+      findsOneWidget,
+    );
+    expect(calls.writes, isEmpty);
+
+    await t.tap(find.text('İptal'));
+    await _settle(t);
+    expect(calls.writes, isEmpty);
+    expect(find.byType(SnackBar), findsNothing);
+
+    await t.tap(find.byKey(const Key('export-button')));
+    await _settle(t);
+    await t.tap(find.text('Üzerine yaz'));
+    await _settle(t);
+    expect(calls.writes.single.$1, '/tmp/out.zip');
+  });
+
+  testWidgets('picked .zip path is not re-confirmed', (t) async {
+    final calls = _Calls();
+    await _pump(
+      t,
+      _controller(),
+      _io(calls, zipPath: '/tmp/out.zip', existing: {'/tmp/out.zip'}),
+    );
+    await _only(t, IconPlatform.windows);
+    await t.tap(find.byKey(const Key('export-button')));
+    await _settle(t);
+    expect(find.text('Üzerine yaz'), findsNothing);
+    expect(calls.writes.single.$1, '/tmp/out.zip');
   });
 
   testWidgets('cancelled picker does nothing', (t) async {

@@ -122,4 +122,83 @@ void main() {
       'jet-icons — out.jeticon',
     );
   });
+
+  testWidgets('save failure from an unencodable value shows a snackbar', (
+    t,
+  ) async {
+    final dir = Directory.systemTemp.createTempSync('jet_icons_app_test');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final c = DocumentController(
+      IconDocument.empty().copyWith(extra: {'bad': Object()}),
+    );
+    await _pump(t, c, save: () async => '${dir.path}/out.jeticon');
+
+    await t.tap(find.byKey(const Key('action-save')));
+    await _settle(t);
+
+    expect(find.textContaining('Kaydedilemedi:'), findsOneWidget);
+  });
+
+  group('open with unsaved changes', () {
+    late Directory dir;
+    late File good;
+
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('jet_icons_app_test');
+      good = File('${dir.path}/good.jeticon')
+        ..writeAsStringSync(encodeJeticon(IconDocument.empty()));
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    DocumentController dirty() {
+      final c = DocumentController();
+      c.apply(c.doc.copyWith(background: const Layer(null, [])));
+      return c;
+    }
+
+    testWidgets('cancel keeps the document and never picks a file', (t) async {
+      var picked = 0;
+      final c = dirty();
+      await _pump(
+        t,
+        c,
+        open: () async {
+          picked++;
+          return good.path;
+        },
+      );
+      await t.tap(find.byKey(const Key('action-open')));
+      await t.pumpAndSettle();
+      expect(find.text('Kaydedilmemiş değişiklikler'), findsOneWidget);
+      expect(
+        find.text('Açık dosyadaki değişiklikler kaybolacak. Devam edilsin mi?'),
+        findsOneWidget,
+      );
+      await t.tap(find.text('İptal'));
+      await t.pumpAndSettle();
+      expect(picked, 0);
+      expect(c.dirty, isTrue);
+      expect(c.filePath, isNull);
+    });
+
+    testWidgets('continue opens the file', (t) async {
+      final c = dirty();
+      await _pump(t, c, open: () async => good.path);
+      await t.tap(find.byKey(const Key('action-open')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Devam et'));
+      await _settle(t);
+      expect(c.filePath, good.path);
+      expect(c.dirty, isFalse);
+    });
+
+    testWidgets('clean document opens without a dialog', (t) async {
+      final c = DocumentController();
+      await _pump(t, c, open: () async => good.path);
+      await t.tap(find.byKey(const Key('action-open')));
+      await _settle(t);
+      expect(find.text('Kaydedilmemiş değişiklikler'), findsNothing);
+      expect(c.filePath, good.path);
+    });
+  });
 }

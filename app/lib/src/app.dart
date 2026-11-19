@@ -78,6 +78,7 @@ class _Shell extends StatelessWidget {
 
   Future<void> _open(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
+    if (controller.dirty && !await _confirmDiscard(context)) return;
     final path = await pickOpenPath();
     if (path == null) return;
     try {
@@ -90,8 +91,32 @@ class _Shell extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(content: Text('Dosya açılamadı: ${e.message}')),
       );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Dosya açılamadı: $e')));
     }
   }
+
+  Future<bool> _confirmDiscard(BuildContext context) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Kaydedilmemiş değişiklikler'),
+          content: const Text(
+            'Açık dosyadaki değişiklikler kaybolacak. Devam edilsin mi?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('İptal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Devam et'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 
   Future<void> _save(BuildContext context) async {
     if (controller.filePath == null) return _saveAs(context);
@@ -112,6 +137,8 @@ class _Shell extends StatelessWidget {
       messenger.showSnackBar(
         SnackBar(content: Text('Dosya kaydedilemedi: ${e.message}')),
       );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Kaydedilemedi: $e')));
     }
   }
 

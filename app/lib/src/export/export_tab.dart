@@ -87,9 +87,14 @@ class _ExportTabState extends State<ExportTab> {
   }
 
   Future<String?> _exportZip() async {
-    var path = await _io.pickZipPath();
-    if (path == null) return null;
-    if (!path.toLowerCase().endsWith('.zip')) path = '$path.zip';
+    final picked = await _io.pickZipPath();
+    if (picked == null) return null;
+    final path = picked.toLowerCase().endsWith('.zip') ? picked : '$picked.zip';
+    // The native dialog only confirmed the name the user typed; a path we
+    // changed needs its own overwrite confirmation.
+    if (path != picked && await _io.exists(path)) {
+      if (!mounted || !await _confirmFileOverwrite(path)) return null;
+    }
     final bundle = await _render();
     await _io.writeFile(path, encodeZip(bundle));
     return path;
@@ -111,14 +116,19 @@ class _ExportTabState extends State<ExportTab> {
     }
   }
 
-  Future<bool> _confirmOverwrite(String path) async =>
+  Future<bool> _confirmOverwrite(String path) => _confirm(
+    '$path zaten var ve boş değil. Aynı adlı dosyaların üzerine '
+    'yazılsın mı? Diğer dosyalara dokunulmaz.',
+  );
+
+  Future<bool> _confirmFileOverwrite(String path) =>
+      _confirm('$path zaten var. Üzerine yazılsın mı?');
+
+  Future<bool> _confirm(String message) async =>
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          content: Text(
-            '$path zaten var ve boş değil. Aynı adlı dosyaların üzerine '
-            'yazılsın mı? Diğer dosyalara dokunulmaz.',
-          ),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),

@@ -5,6 +5,15 @@ import 'package:material_ui/material_ui.dart';
 import '../design/doc_edit.dart';
 import '../document_controller.dart';
 
+/// Identity of an asset element's content: its id plus the identity and size
+/// of its payload. Ids alone are not enough, because opening another document
+/// reuses ids like `e1` for different images.
+String _assetSignature(IconElement e) => switch (e) {
+  RasterElement() => '${e.id}:${identityHashCode(e.png)}:${e.png.length}',
+  RawSvgElement() => '${e.id}:${identityHashCode(e.svg)}:${e.svg.length}',
+  _ => e.id,
+};
+
 /// Keeps a [PreparedAssets] in sync with the document of
 /// [docController]: reloads the decoded rasters / SVG pictures whenever the
 /// set of such elements changes, and disposes them with the state.
@@ -39,7 +48,7 @@ mixin DocAssetsMixin<T extends StatefulWidget> on State<T> {
 
   void _refreshAssets() {
     final elements = assetElements(docController.doc);
-    final key = (elements.map((e) => e.id).toList()..sort()).join('\u0000');
+    final key = (elements.map(_assetSignature).toList()..sort()).join('\u0000');
     if (key == _assetKey) return;
     _assetKey = key;
     final generation = ++_generation;
@@ -49,7 +58,6 @@ mixin DocAssetsMixin<T extends StatefulWidget> on State<T> {
       old.dispose();
       return;
     }
-    final messenger = ScaffoldMessenger.maybeOf(context);
     PreparedAssets.load(
           ResolvedIcon(
             Layer(null, elements),
@@ -69,9 +77,9 @@ mixin DocAssetsMixin<T extends StatefulWidget> on State<T> {
         .catchError((Object _) {
           if (!mounted || generation != _generation) return;
           // Keep painting without assets; the next asset-set change retries.
-          messenger?.showSnackBar(
-            const SnackBar(content: Text('Görsel yüklenemedi')),
-          );
+          ScaffoldMessenger.maybeOf(
+            context,
+          )?.showSnackBar(const SnackBar(content: Text('Görsel yüklenemedi')));
         });
   }
 }

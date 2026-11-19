@@ -53,8 +53,14 @@ class IconDocument {
   /// Unknown top-level `.jeticon` fields, preserved across read/write.
   final Map<String, Object?> extra;
 
-  IconShape shapeFor(IconPlatform platform) =>
-      shapes[platform] ?? IconShape.roundedSquare;
+  /// windows/linux/web use [shapes] (default rounded square); every other
+  /// platform is always square.
+  IconShape shapeFor(IconPlatform platform) => switch (platform) {
+    IconPlatform.windows ||
+    IconPlatform.linux ||
+    IconPlatform.web => shapes[platform] ?? IconShape.roundedSquare,
+    _ => IconShape.square,
+  };
 
   /// `monochrome` uses the [unset] sentinel so `null` clears it.
   IconDocument copyWith({

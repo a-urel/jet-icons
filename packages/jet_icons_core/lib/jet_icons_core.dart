@@ -9,3 +9,5 @@ export 'src/model/fill.dart';
 export 'src/model/layer.dart';
 export 'src/model/override.dart';
 export 'src/model/transform.dart';
+export 'src/resolve/resolver.dart'
+    show ResolvedIcon, findElement, resolveIcon, shapeFor;

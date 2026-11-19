@@ -1,12 +1,11 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jet_icons_core/jet_icons_core.dart';
-import 'package:jet_icons_render/jet_icons_render.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../document_controller.dart';
+import '../shared/doc_assets.dart';
 import 'canvas_view.dart';
-import 'doc_edit.dart';
 import 'layers_panel.dart';
 import 'preview_strip.dart';
 import 'properties_panel.dart';
@@ -36,78 +35,31 @@ class DesignTab extends StatefulWidget {
   State<DesignTab> createState() => _DesignTabState();
 }
 
-class _DesignTabState extends State<DesignTab> {
-  PreparedAssets _assets = PreparedAssets.empty();
-  String _assetKey = '';
-  int _generation = 0;
+class _DesignTabState extends State<DesignTab> with DocAssetsMixin<DesignTab> {
   bool _safeZone = false;
   bool _macBody = false;
 
   DocumentController get _c => widget.controller;
 
   @override
+  DocumentController get docController => widget.controller;
+
+  @override
   void initState() {
     super.initState();
-    _c.addListener(_refreshAssets);
-    _refreshAssets();
+    initDocAssets();
   }
 
   @override
   void didUpdateWidget(DesignTab old) {
     super.didUpdateWidget(old);
-    if (old.controller != widget.controller) {
-      old.controller.removeListener(_refreshAssets);
-      widget.controller.addListener(_refreshAssets);
-      _refreshAssets();
-    }
+    rebindDocAssets(old.controller);
   }
 
   @override
   void dispose() {
-    _c.removeListener(_refreshAssets);
-    _generation++;
-    _assets.dispose();
+    disposeDocAssets();
     super.dispose();
-  }
-
-  /// Reloads the decoded rasters / SVG pictures when the set of such
-  /// elements changes.
-  void _refreshAssets() {
-    final elements = assetElements(_c.doc);
-    final key = (elements.map((e) => e.id).toList()..sort()).join('\u0000');
-    if (key == _assetKey) return;
-    _assetKey = key;
-    final generation = ++_generation;
-    if (elements.isEmpty) {
-      final old = _assets;
-      setState(() => _assets = PreparedAssets.empty());
-      old.dispose();
-      return;
-    }
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    PreparedAssets.load(
-          ResolvedIcon(
-            Layer(null, elements),
-            const Layer(null, []),
-            const Layer(null, []),
-          ),
-        )
-        .then((loaded) {
-          if (!mounted || generation != _generation) {
-            loaded.dispose();
-            return;
-          }
-          final old = _assets;
-          setState(() => _assets = loaded);
-          old.dispose();
-        })
-        .catchError((Object _) {
-          if (!mounted || generation != _generation) return;
-          // Keep painting without assets; the next asset-set change retries.
-          messenger?.showSnackBar(
-            const SnackBar(content: Text('Görsel yüklenemedi')),
-          );
-        });
   }
 
   Future<void> _import() async {
@@ -176,7 +128,7 @@ class _DesignTabState extends State<DesignTab> {
                           padding: const EdgeInsets.all(16),
                           child: CanvasView(
                             controller: _c,
-                            assets: _assets,
+                            assets: assets,
                             showSafeZone: _safeZone,
                             showMacBody: _macBody,
                           ),
@@ -193,7 +145,7 @@ class _DesignTabState extends State<DesignTab> {
           const Divider(height: 1),
           SizedBox(
             height: 96,
-            child: PreviewStrip(doc: _c.doc, assets: _assets),
+            child: PreviewStrip(doc: _c.doc, assets: assets),
           ),
         ],
       ),

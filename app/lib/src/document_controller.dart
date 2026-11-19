@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:jet_icons_core/jet_icons_core.dart';
 
+import 'shared/ids.dart';
+
 const _maxHistory = 100;
 
 /// Holds the open icon document, its undo/redo history, the current selection
@@ -87,7 +89,9 @@ class DocumentController extends ChangeNotifier {
   void _afterHistoryMove() {
     _dirty = true;
     final id = _selectedElementId;
-    if (id != null && !_allIds(_doc).contains(id)) _selectedElementId = null;
+    if (id != null && !allElementIds(_doc).contains(id)) {
+      _selectedElementId = null;
+    }
     notifyListeners();
   }
 
@@ -133,7 +137,7 @@ class DocumentController extends ChangeNotifier {
   ) {
     final dot = fileName.lastIndexOf('.');
     final ext = dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
-    final id = _nextId();
+    final id = nextFreeId(allElementIds(_doc));
     final name = fileName.split(RegExp(r'[/\\]')).last;
     final result = switch (ext) {
       'svg' => importSvg(utf8.decode(bytes), id: id, name: name),
@@ -163,33 +167,4 @@ class DocumentController extends ChangeNotifier {
     notifyListeners();
     return result.warnings;
   }
-
-  String _nextId() {
-    final used = _allIds(_doc);
-    var n = 1;
-    while (used.contains('e$n')) {
-      n++;
-    }
-    return 'e$n';
-  }
-}
-
-Set<String> _allIds(IconDocument doc) {
-  final ids = <String>{};
-  void elements(List<IconElement> list) {
-    for (final e in list) {
-      ids.add(e.id);
-      if (e is GroupElement) elements(e.children);
-    }
-  }
-
-  for (final l in [doc.background, doc.foreground, doc.monochrome]) {
-    if (l != null) elements(l.elements);
-  }
-  for (final o in doc.overrides) {
-    for (final l in o.detached.values) {
-      elements(l.elements);
-    }
-  }
-  return ids;
 }

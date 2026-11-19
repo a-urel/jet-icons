@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'design/design_tab.dart';
 import 'document_controller.dart';
+import 'platforms/platforms_tab.dart';
 
 const _jeticonType = XTypeGroup(label: 'jet-icons', extensions: ['jeticon']);
 
@@ -176,7 +177,7 @@ class _Shell extends StatelessWidget {
             body: TabBarView(
               children: [
                 DesignTab(controller: controller),
-                const PlatformsTabPlaceholder(),
+                PlatformsTab(controller: controller),
                 const ExportTabPlaceholder(),
               ],
             ),
@@ -185,14 +186,6 @@ class _Shell extends StatelessWidget {
       ),
     );
   }
-}
-
-class PlatformsTabPlaceholder extends StatelessWidget {
-  const PlatformsTabPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const Center(child: Text('Platformlar'));
 }
 
 class ExportTabPlaceholder extends StatelessWidget {

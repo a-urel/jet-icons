@@ -68,6 +68,18 @@ void main() {
       expect(o, b.length);
     });
 
+    test('64 px is only ic12 (icp6 maps to a 48 px slot)', () {
+      final b = encodeIcns({64: solidPng(4)});
+      final types = <String>[];
+      var o = 8;
+      final v = ByteData.sublistView(b);
+      while (o < b.length) {
+        types.add(ascii.decode(b.sublist(o, o + 4)));
+        o += v.getUint32(o + 4);
+      }
+      expect(types, ['ic12']);
+    });
+
     test('rejects unsupported size', () {
       expect(() => encodeIcns({48: solidPng(4)}), throwsArgumentError);
     });

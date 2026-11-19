@@ -144,6 +144,33 @@ void main() {
     );
   });
 
+  test('non-finite numbers (1e400) throw JeticonFormatException', () {
+    final src = encodeJeticon(IconDocument.empty());
+    // double field
+    final withScale = src.replaceFirst(
+      '"canvasSize": 1024',
+      '"canvasSize": 1e400',
+    );
+    expect(
+      () => decodeJeticon(withScale),
+      throwsA(isA<JeticonFormatException>()),
+    );
+    final doc = sampleDocument();
+    final text = encodeJeticon(doc);
+    final scaled = text.replaceFirst('"scale": 1.0', '"scale": 1e400');
+    expect(scaled, isNot(text));
+    expect(() => decodeJeticon(scaled), throwsA(isA<JeticonFormatException>()));
+    final withHeight = text.replaceFirst(
+      RegExp(r'"height": (\d+)'),
+      '"height": 1e400',
+    );
+    expect(withHeight, isNot(text));
+    expect(
+      () => decodeJeticon(withHeight),
+      throwsA(isA<JeticonFormatException>()),
+    );
+  });
+
   test('missing required field throws JeticonFormatException', () {
     expect(
       () => decodeJeticon('{"formatVersion": 1, "canvasSize": 1024}'),

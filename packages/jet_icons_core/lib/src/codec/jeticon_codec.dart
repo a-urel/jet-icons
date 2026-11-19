@@ -237,13 +237,13 @@ String _str(Object? v, String path) {
 
 int _int(Object? v, String path) {
   if (v is int) return v;
-  if (v is double && v == v.truncateToDouble()) return v.toInt();
-  throw JeticonFormatException('"$path" must be an integer');
+  if (v is double && v.isFinite && v == v.truncateToDouble()) return v.toInt();
+  throw JeticonFormatException('"$path" must be a finite integer');
 }
 
 double _num(Object? v, String path) {
-  if (v is num) return v.toDouble();
-  throw JeticonFormatException('"$path" must be a number');
+  if (v is num && v.isFinite) return v.toDouble();
+  throw JeticonFormatException('"$path" must be a finite number');
 }
 
 bool _bool(Object? v, String path) {

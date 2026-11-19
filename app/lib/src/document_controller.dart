@@ -34,6 +34,31 @@ class DocumentController extends ChangeNotifier {
     notifyListeners();
   }
 
+  IconDocument? _gestureStart;
+
+  /// Starts a continuous edit (drag, slider): [preview] updates are not
+  /// recorded; [endGesture] records the whole gesture as one undo step.
+  void beginGesture() => _gestureStart = _doc;
+
+  /// Replaces the document without touching history or [dirty].
+  void preview(IconDocument next) {
+    _doc = next;
+    notifyListeners();
+  }
+
+  /// Pushes the [beginGesture] snapshot as one undo step if the document
+  /// changed since; otherwise does nothing.
+  void endGesture() {
+    final start = _gestureStart;
+    _gestureStart = null;
+    if (start == null || start == _doc) return;
+    _undo.add(start);
+    if (_undo.length > _maxHistory) _undo.removeAt(0);
+    _redo.clear();
+    _dirty = true;
+    notifyListeners();
+  }
+
   void _push(IconDocument next) {
     _undo.add(_doc);
     if (_undo.length > _maxHistory) _undo.removeAt(0);

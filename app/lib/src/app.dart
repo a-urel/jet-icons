@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:jet_icons_core/jet_icons_core.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'design/design_tab.dart';
 import 'document_controller.dart';
 
 const _jeticonType = XTypeGroup(label: 'jet-icons', extensions: ['jeticon']);
@@ -172,11 +173,11 @@ class _Shell extends StatelessWidget {
                 ],
               ),
             ),
-            body: const TabBarView(
+            body: TabBarView(
               children: [
-                DesignTabPlaceholder(),
-                PlatformsTabPlaceholder(),
-                ExportTabPlaceholder(),
+                DesignTab(controller: controller),
+                const PlatformsTabPlaceholder(),
+                const ExportTabPlaceholder(),
               ],
             ),
           ),
@@ -184,13 +185,6 @@ class _Shell extends StatelessWidget {
       ),
     );
   }
-}
-
-class DesignTabPlaceholder extends StatelessWidget {
-  const DesignTabPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) => const Center(child: Text('Tasarla'));
 }
 
 class PlatformsTabPlaceholder extends StatelessWidget {

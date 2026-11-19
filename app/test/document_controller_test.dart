@@ -19,6 +19,7 @@ IconDocument _docWithBg(int argb) => IconDocument.empty().copyWith(
 PathElement _path(String id) => PathElement(id: id, name: id, d: 'M0 0H1V1Z');
 
 void main() {
+  gestureTests();
   group('history', () {
     test('apply/undo/redo', () {
       final c = DocumentController();
@@ -214,6 +215,50 @@ void main() {
     test('save without any path throws StateError', () async {
       final c = DocumentController();
       await expectLater(c.save(), throwsStateError);
+    });
+  });
+}
+
+void gestureTests() {
+  group('gestures', () {
+    IconDocument withBg(int argb) => IconDocument.empty().copyWith(
+      background: Layer(SolidFill(JColor(argb)), const []),
+    );
+
+    test('a whole drag is exactly one undo step', () {
+      final c = DocumentController();
+      final start = c.doc;
+      c.beginGesture();
+      c.preview(withBg(0xFF111111));
+      c.preview(withBg(0xFF222222));
+      expect(c.canUndo, isFalse);
+      expect(c.dirty, isFalse);
+      c.endGesture();
+      expect(c.canUndo, isTrue);
+      expect(c.dirty, isTrue);
+      c.undo();
+      expect(c.doc, start);
+      expect(c.canUndo, isFalse);
+    });
+
+    test('unchanged gesture records nothing', () {
+      final c = DocumentController();
+      c.beginGesture();
+      c.preview(c.doc);
+      c.endGesture();
+      expect(c.canUndo, isFalse);
+      expect(c.dirty, isFalse);
+    });
+
+    test('gesture clears redo', () {
+      final c = DocumentController();
+      c.apply(withBg(0xFF111111));
+      c.undo();
+      expect(c.canRedo, isTrue);
+      c.beginGesture();
+      c.preview(withBg(0xFF333333));
+      c.endGesture();
+      expect(c.canRedo, isFalse);
     });
   });
 }

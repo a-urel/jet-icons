@@ -23,7 +23,7 @@ class GradientStop {
   int get hashCode => Object.hash(offset, color);
 }
 
-/// A paint. Gradient coordinates are in canvas units (1024 x 1024).
+/// A paint. Coordinates are in the element's local space (same as its path `d`); the renderer applies the element transform to the fill.
 @immutable
 sealed class Fill {
   const Fill();

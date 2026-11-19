@@ -1,0 +1,18 @@
+name: jet_icons_render
+description: Flutter renderer for jet-icons (canvas painter and PNG rasterizer).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.4.0
+  jet_icons_core: any
+  path_parsing: ^1.1.0
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
